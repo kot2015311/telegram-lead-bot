@@ -14,3 +14,6 @@ __pycache__/
 
 *.csv
 leads_export.csv
+
+# Google Credentials
+service_account.json

@@ -1,3 +1,4 @@
+from bot.google_sheets import append_lead_to_sheets
 from aiogram import Router, F, Bot
 from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
@@ -65,7 +66,23 @@ async def process_contact(message: Message, state: FSMContext, bot: Bot):
     name = data.get("name")
     user_id = message.from_user.id
     username = f"@{message.from_user.username}" if message.from_user.username else "Нет username"
+    # 1. Сохраняем в SQLite
+    await add_lead(
+        user_id=user_id,
+        username=username,
+        service=service,
+        name=name,
+        contact=contact
+    )
 
+    # 1.5. Сохраняем в Google Таблицу
+    await append_lead_to_sheets(
+        service=service,
+        name=name,
+        contact=contact,
+        username=username,
+        user_id=user_id
+    )
     # 1. Сохраняем в SQLite
     await add_lead(
         user_id=user_id,
