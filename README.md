@@ -32,6 +32,7 @@ telegram-lead-bot/
 ├── .gitignore               # Игнорируемые файлы
 ├── README.md                # Документация
 └── requirements.txt         # Зависимости проекта
+```
 
 ## 📸 Скриншоты работы
 
