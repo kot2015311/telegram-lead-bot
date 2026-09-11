@@ -1,18 +1,15 @@
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
+from bot.keyboards import get_main_keyboard
 
-from ..keyboards import main_keyboard
-
-router = Router(name="start")
+router = Router()
 
 
 @router.message(CommandStart())
-async def handle_start(message: Message, state: FSMContext) -> None:
-    await state.clear()
+async def cmd_start(message: Message):
     await message.answer(
-        "Здравствуйте! Это демонстрационный бот для приёма заявок.\n\n"
-        "Нажмите кнопку ниже, чтобы оставить заявку.",
-        reply_markup=main_keyboard,
+        f"Привет, {message.from_user.first_name}! 👋\n\n"
+        "Я бот для приёма заявок. Нажми кнопку ниже, чтобы оставить заявку!",
+        reply_markup=get_main_keyboard()
     )

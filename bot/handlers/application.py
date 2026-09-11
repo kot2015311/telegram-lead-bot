@@ -1,123 +1,103 @@
-import re
-
-from aiogram import F, Router
-from aiogram.filters import Command
+from aiogram import Router, F, Bot
+from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.filters import Command
 
-from ..keyboards import main_keyboard, remove_keyboard, service_keyboard
-from ..states import LeadForm
+from bot.states import LeadForm
+from bot.keyboards import get_services_keyboard, get_cancel_keyboard
+from bot.database import add_lead
+from bot.config import ADMIN_ID
 
-router = Router(name="application")
-
-ALLOWED_SERVICES = {
-    "Разработка бота",
-    "Доработка бота",
-    "Консультация",
-}
+# Создаем роутер!
+router = Router()
 
 
-def is_valid_name(name: str) -> bool:
-    name = name.strip()
-    return 2 <= len(name) <= 50
-
-
-def is_valid_contact(contact: str) -> bool:
-    contact = contact.strip()
-
-    if contact.startswith("@") and len(contact) >= 5:
-        return True
-
-    digits = re.sub(r"\D", "", contact)
-    return 10 <= len(digits) <= 15
-
-
+@router.message(F.text == "❌ Отмена")
 @router.message(Command("cancel"))
-@router.message(F.text.casefold() == "отмена")
-async def cancel_form(message: Message, state: FSMContext) -> None:
+async def cancel_handler(message: Message, state: FSMContext):
     current_state = await state.get_state()
-
     if current_state is None:
-        await message.answer(
-            "Сейчас нет активной анкеты.",
-            reply_markup=main_keyboard,
-        )
         return
 
     await state.clear()
     await message.answer(
-        "Анкета отменена.",
-        reply_markup=main_keyboard,
+        "Заполнение анкеты отменено.",
+        reply_markup=ReplyKeyboardRemove()
     )
 
 
-@router.message(F.text == "Оставить заявку")
-async def start_form(message: Message, state: FSMContext) -> None:
+@router.message(F.text == "📝 Оставить заявку")
+async def start_application(message: Message, state: FSMContext):
     await state.set_state(LeadForm.service)
     await message.answer(
-        "Выберите услугу:",
-        reply_markup=service_keyboard,
+        "Выберите услугу, которая вас интересует:",
+        reply_markup=get_services_keyboard()
     )
 
 
 @router.message(LeadForm.service)
-async def process_service(message: Message, state: FSMContext) -> None:
-    service = message.text.strip()
-
-    if service not in ALLOWED_SERVICES:
-        await message.answer(
-            "Пожалуйста, выберите услугу кнопкой ниже.",
-            reply_markup=service_keyboard,
-        )
-        return
-
-    await state.update_data(service=service)
+async def process_service(message: Message, state: FSMContext):
+    await state.update_data(service=message.text)
     await state.set_state(LeadForm.name)
-
     await message.answer(
-        "Введите ваше имя:",
-        reply_markup=remove_keyboard,
+        "Как к вам обращаться? (Введите ваше имя)",
+        reply_markup=get_cancel_keyboard()
     )
 
 
 @router.message(LeadForm.name)
-async def process_name(message: Message, state: FSMContext) -> None:
-    name = message.text.strip()
-
-    if not is_valid_name(name):
-        await message.answer(
-            "Имя должно содержать от 2 до 50 символов. Попробуйте ещё раз."
-        )
-        return
-
-    await state.update_data(name=name)
+async def process_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
     await state.set_state(LeadForm.contact)
-
     await message.answer(
-        "Введите ваш контакт:\n"
-        "- номер телефона\n"
-        "- или username в Telegram, например @username"
+        "Оставьте ваш номер телефона или логин Telegram для связи:",
+        reply_markup=get_cancel_keyboard()
     )
 
 
 @router.message(LeadForm.contact)
-async def process_contact(message: Message, state: FSMContext) -> None:
+async def process_contact(message: Message, state: FSMContext, bot: Bot):
     contact = message.text.strip()
-
-    if not is_valid_contact(contact):
-        await message.answer(
-            "Некорректный контакт. Введите номер телефона или @username."
-        )
-        return
-
     await state.update_data(contact=contact)
     data = await state.get_data()
-    await state.clear()
 
-    await message.answer(
-        "Спасибо! Ваша заявка принята.\n\n"
-        f"Услуга: {data['service']}\n"
-        f"Имя: {data['name']}\n"
-        f"Контакт: {data['contact']}",
-        reply_markup=main_keyboard,
+    service = data.get("service")
+    name = data.get("name")
+    user_id = message.from_user.id
+    username = f"@{message.from_user.username}" if message.from_user.username else "Нет username"
+
+    # 1. Сохраняем в SQLite
+    await add_lead(
+        user_id=user_id,
+        username=username,
+        service=service,
+        name=name,
+        contact=contact
     )
+
+    # 2. Уведомляем пользователя
+    await message.answer(
+        "Спасибо! Ваша заявка успешно принята. Мы свяжемся с вами в ближайшее время.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+    # 3. Отправляем карточку заявки админу
+    admin_text = (
+        "🔥 <b>Новая заявка!</b>\n\n"
+        f"<b>Услуга:</b> {service}\n"
+        f"<b>Имя:</b> {name}\n"
+        f"<b>Контакт:</b> {contact}\n"
+        f"<b>Telegram:</b> {username} (ID: <code>{user_id}</code>)"
+    )
+    
+    try:
+        await bot.send_message(
+            chat_id=ADMIN_ID,
+            text=admin_text,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        print(f"Не удалось отправить уведомление админу: {e}")
+
+    # Очищаем FSM
+    await state.clear()

@@ -1,31 +1,27 @@
 import asyncio
 import logging
-
 from aiogram import Bot, Dispatcher
+from bot.config import BOT_TOKEN
+from bot.database import init_db
+from bot.handlers import start, application
 
-from .config import load_config
-from .handlers.application import router as application_router
-from .handlers.start import router as start_router
+logging.basicConfig(level=logging.INFO)
 
 
-async def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-    )
+async def main():
+    # Инициализируем базу данных
+    await init_db()
 
-    config = load_config()
+    bot = Bot(token=BOT_TOKEN)
+    dp = Dispatcher()
 
-    dispatcher = Dispatcher()
-    dispatcher.include_router(start_router)
-    dispatcher.include_router(application_router)
+    # Подключаем роутеры
+    dp.include_router(start.router)
+    dp.include_router(application.router)
 
-    bot = Bot(token=config.bot_token)
-    await dispatcher.start_polling(bot)
+    logging.info("Бот запущен и готов к работе!")
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(main())
