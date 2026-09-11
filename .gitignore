@@ -11,3 +11,6 @@ __pycache__/
 # Local databases
 *.db
 *.sqlite3
+
+*.csv
+leads_export.csv
