@@ -37,8 +37,8 @@ telegram-lead-bot/
 
 | Главное меню | Заполнение анкеты |
 | :---: | :---: |
-| <img src="assets/start.png" width="350"/> | <img src="assets/forms.png" width="350"/> |
+| img src="assets/start.png" width="350"/ | img src="assets/forms.png" width="350"/ |
 
 | Уведомление админу | Панель управления и экспорт |
 | :---: | :---: |
-| <img src="assets/admin_notify.png" width="350"/> | <img src="assets/admin_export.png" width="350"/> |
+| img src="assets/admin_notify.png" width="350"/ | img src="assets/admin_export.png" width="350"/ |
