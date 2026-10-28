@@ -1,3 +1,5 @@
+from html import escape
+
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.types import Message, FSInputFile
@@ -24,9 +26,9 @@ async def cmd_admin_leads(message: Message):
     for lead in leads:
         text += (
             f"🔹 <b>Заявка #{lead['id']}</b> ({lead['created_at']})\n"
-            f"• <b>Услуга:</b> {lead['service']}\n"
-            f"• <b>Имя:</b> {lead['name']}\n"
-            f"• <b>Контакт:</b> {lead['contact']}\n\n"
+            f"• <b>Услуга:</b> {escape(lead['service'])}\n"
+            f"• <b>Имя:</b> {escape(lead['name'])}\n"
+            f"• <b>Контакт:</b> {escape(lead['contact'])}\n\n"
         )
 
     text += "📥 Напишите /export чтобы скачать файл с полной базой."

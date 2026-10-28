@@ -29,5 +29,4 @@ async def append_lead_to_sheets(service: str, name: str, contact: str, username:
         await asyncio.to_thread(_sync_append_lead, SPREADSHEET_ID, row)
         logging.info("Заявка успешно отправлена в Google Таблицу!")
     except Exception as e:
-        logging.error(f"Ошибка при записи в Google Таблицу: {e}") # Убедись, что тут {e}
-        print(f"ПОЛНЫЙ ТЕКСТ ОШИБКИ: {e}") # Добавь эту строку для отладки
+        logging.error(f"Ошибка при записи в Google Таблицу: {e}")
